@@ -11,10 +11,11 @@ from .sampler.chat_completion_sampler import (
     OPENAI_SYSTEM_MESSAGE_CHATGPT,
     ChatCompletionSampler,
 )
+from .sampler.gemini_cli_sampler import GeminiCLISampler
 from .sampler.o_chat_completion_sampler import OChatCompletionSampler
 
 
-def _build_samplers() -> dict[str, ChatCompletionSampler | OChatCompletionSampler]:
+def _build_samplers() -> dict[str, ChatCompletionSampler | OChatCompletionSampler | GeminiCLISampler]:
     """
     Define all available samplers. Filtering happens later based on CLI args.
     """
@@ -46,6 +47,13 @@ def _build_samplers() -> dict[str, ChatCompletionSampler | OChatCompletionSample
         "o3-mini_low": OChatCompletionSampler(
             model="o3-mini",
             reasoning_effort="low",
+        ),
+        # Gemini CLI models
+        "gemini-2.5-flash-cli": GeminiCLISampler(
+            model="gemini-2.5-flash",
+        ),
+        "gemini-2.5-pro-cli": GeminiCLISampler(
+            model="gemini-2.5-pro",
         ),
     }
 

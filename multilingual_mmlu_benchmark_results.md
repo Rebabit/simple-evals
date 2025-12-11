@@ -28,3 +28,34 @@ These results can be reproduced by running
 ```bash
 python -m simple-evals.run_multilingual_mmlu
 ```
+
+## Usage
+
+### Running with Gemini CLI Models
+
+The evaluation supports Gemini models via the Gemini CLI. To use Gemini models:
+
+1. **Install the Gemini CLI:**
+   ```bash
+   npm install -g @google/gemini-cli
+   # or
+   brew install gemini-cli
+   ```
+
+2. **Set up authentication:**
+   ```bash
+   export GEMINI_API_KEY="your-api-key-here"
+   ```
+   Get your API key from https://aistudio.google.com/apikey
+
+3. **Run evaluation with Gemini models:**
+   ```bash
+   # Run with Gemini 2.5 Flash
+   python -m simple-evals.run_multilingual_mmlu --model gemini-2.5-flash-cli --examples 10 --languages mmlu_EN-US
+
+   # Run with Gemini 2.5 Pro
+   python -m simple-evals.run_multilingual_mmlu --model gemini-2.5-pro-cli --examples 10 --languages mmlu_EN-US
+
+   # Run with multiple languages
+   python -m simple-evals.run_multilingual_mmlu --model gemini-2.5-flash-cli --languages mmlu_EN-US mmlu_ZH-CN mmlu_ES-LA
+   ```
