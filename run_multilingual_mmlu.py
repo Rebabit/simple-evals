@@ -1,4 +1,6 @@
+import argparse
 import json
+from typing import Iterable
 
 import pandas as pd
 
@@ -12,9 +14,11 @@ from .sampler.chat_completion_sampler import (
 from .sampler.o_chat_completion_sampler import OChatCompletionSampler
 
 
-def main():
-    debug = True
-    samplers = {
+def _build_samplers() -> dict[str, ChatCompletionSampler | OChatCompletionSampler]:
+    """
+    Define all available samplers. Filtering happens later based on CLI args.
+    """
+    return {
         "gpt-4o_chatgpt": ChatCompletionSampler(
             model="gpt-4o",
             system_message=OPENAI_SYSTEM_MESSAGE_CHATGPT,
@@ -45,63 +49,111 @@ def main():
         ),
     }
 
-    def get_evals(eval_name):
+
+ALL_EVAL_NAMES = [
+    "mmlu_AR-XY",
+    "mmlu_BN-BD",
+    "mmlu_DE-DE",
+    "mmlu_EN-US",
+    "mmlu_ES-LA",
+    "mmlu_FR-FR",
+    "mmlu_HI-IN",
+    "mmlu_ID-ID",
+    "mmlu_IT-IT",
+    "mmlu_JA-JP",
+    "mmlu_KO-KR",
+    "mmlu_PT-BR",
+    "mmlu_ZH-CN",
+    "mmlu_SW-KE",
+    "mmlu_YO-NG",
+]
+
+
+def _parse_args(argv: Iterable[str] | None = None):
+    parser = argparse.ArgumentParser(description="Run multilingual MMLU evals.")
+    parser.add_argument(
+        "--model",
+        action="append",
+        dest="models",
+        help="Sampler name(s) to run. Defaults to all known samplers.",
+    )
+    parser.add_argument(
+        "--examples",
+        type=int,
+        default=None,
+        help="Number of examples per language. Default is 10 in debug mode, or full set otherwise.",
+    )
+    parser.add_argument(
+        "--languages",
+        nargs="+",
+        dest="languages",
+        help="Eval names to run (e.g., mmlu_EN-US). Defaults to all.",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Use a small default sample size (10 examples). Overridden by --examples if provided.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Iterable[str] | None = None):
+    args = _parse_args(argv)
+
+    num_examples = args.examples
+    if num_examples is None:
+        num_examples = 10 if args.debug else None
+
+    samplers = _build_samplers()
+    if args.models:
+        samplers = {name: sampler for name, sampler in samplers.items() if name in args.models}
+        if not samplers:
+            raise ValueError(f"No samplers matched --model values {args.models}")
+
+    eval_names = args.languages if args.languages else ALL_EVAL_NAMES
+
+    def get_evals(eval_name: str):
         match eval_name:
             case "mmlu_EN-US":
-                return MMLUEval(num_examples=10 if debug else None, language="EN-US")
+                return MMLUEval(num_examples=num_examples, language="EN-US")
             case "mmlu_AR-XY":
-                return MMLUEval(num_examples=10 if debug else None, language="AR-XY")
+                return MMLUEval(num_examples=num_examples, language="AR-XY")
             case "mmlu_BN-BD":
-                return MMLUEval(num_examples=10 if debug else None, language="BN-BD")
+                return MMLUEval(num_examples=num_examples, language="BN-BD")
             case "mmlu_DE-DE":
-                return MMLUEval(num_examples=10 if debug else None, language="DE-DE")
+                return MMLUEval(num_examples=num_examples, language="DE-DE")
             case "mmlu_ES-LA":
-                return MMLUEval(num_examples=10 if debug else None, language="ES-LA")
+                return MMLUEval(num_examples=num_examples, language="ES-LA")
             case "mmlu_FR-FR":
-                return MMLUEval(num_examples=10 if debug else None, language="FR-FR")
+                return MMLUEval(num_examples=num_examples, language="FR-FR")
             case "mmlu_HI-IN":
-                return MMLUEval(num_examples=10 if debug else None, language="HI-IN")
+                return MMLUEval(num_examples=num_examples, language="HI-IN")
             case "mmlu_ID-ID":
-                return MMLUEval(num_examples=10 if debug else None, language="ID-ID")
+                return MMLUEval(num_examples=num_examples, language="ID-ID")
             case "mmlu_IT-IT":
-                return MMLUEval(num_examples=10 if debug else None, language="IT-IT")
+                return MMLUEval(num_examples=num_examples, language="IT-IT")
             case "mmlu_JA-JP":
-                return MMLUEval(num_examples=10 if debug else None, language="JA-JP")
+                return MMLUEval(num_examples=num_examples, language="JA-JP")
             case "mmlu_KO-KR":
-                return MMLUEval(num_examples=10 if debug else None, language="KO-KR")
+                return MMLUEval(num_examples=num_examples, language="KO-KR")
             case "mmlu_PT-BR":
-                return MMLUEval(num_examples=10 if debug else None, language="PT-BR")
+                return MMLUEval(num_examples=num_examples, language="PT-BR")
             case "mmlu_ZH-CN":
-                return MMLUEval(num_examples=10 if debug else None, language="ZH-CN")
+                return MMLUEval(num_examples=num_examples, language="ZH-CN")
             case "mmlu_SW-KE":
-                return MMLUEval(num_examples=10 if debug else None, language="SW-KE")
+                return MMLUEval(num_examples=num_examples, language="SW-KE")
             case "mmlu_YO-NG":
-                return MMLUEval(num_examples=10 if debug else None, language="YO-NG")
+                return MMLUEval(num_examples=num_examples, language="YO-NG")
             case _:
                 raise Exception(f"Unrecoginized eval type: {eval_name}")
 
-    evals = {
-        eval_name: get_evals(eval_name)
-        for eval_name in [
-            "mmlu_AR-XY",
-            "mmlu_BN-BD",
-            "mmlu_DE-DE",
-            "mmlu_EN-US",
-            "mmlu_ES-LA",
-            "mmlu_FR-FR",
-            "mmlu_HI-IN",
-            "mmlu_ID-ID",
-            "mmlu_IT-IT",
-            "mmlu_JA-JP",
-            "mmlu_KO-KR",
-            "mmlu_PT-BR",
-            "mmlu_ZH-CN",
-            "mmlu_SW-KE",
-            "mmlu_YO-NG",
-        ]
-    }
-    print(evals)
-    debug_suffix = "_DEBUG" if debug else ""
+    evals = {eval_name: get_evals(eval_name) for eval_name in eval_names}
+    print(f"Running evals: {list(evals.keys())}")
+    print(f"Running samplers: {list(samplers.keys())}")
+    debug_suffix = "_DEBUG" if num_examples is not None and num_examples <= 10 else ""
+
+    # Use a unique separator that won't appear in eval or sampler names
+    SEPARATOR = ":::"
     mergekey2resultpath = {}
     for sampler_name, sampler in samplers.items():
         for eval_name, eval_obj in evals.items():
@@ -118,7 +170,8 @@ def main():
             with open(result_filename, "w") as f:
                 f.write(json.dumps(metrics, indent=2))
             print(f"Writing results to {result_filename}")
-            mergekey2resultpath[f"{file_stem}"] = result_filename
+            # Store with separator for reliable parsing
+            mergekey2resultpath[f"{eval_name}{SEPARATOR}{sampler_name}"] = result_filename
     merge_metrics = []
     for eval_sampler_name, result_filename in mergekey2resultpath.items():
         try:
@@ -127,8 +180,13 @@ def main():
             print(e, result_filename)
             continue
         result = result.get("f1_score", result.get("score", None))
-        eval_name = eval_sampler_name[: eval_sampler_name.find("_")]
-        sampler_name = eval_sampler_name[eval_sampler_name.find("_") + 1 :]
+        # Split on unique separator to correctly extract eval_name and sampler_name
+        if SEPARATOR in eval_sampler_name:
+            eval_name, sampler_name = eval_sampler_name.split(SEPARATOR, 1)
+        else:
+            # Fallback for backward compatibility (old format with underscore)
+            eval_name = eval_sampler_name[: eval_sampler_name.find("_")]
+            sampler_name = eval_sampler_name[eval_sampler_name.find("_") + 1 :]
         merge_metrics.append(
             {"eval_name": eval_name, "sampler_name": sampler_name, "metric": result}
         )
