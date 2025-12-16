@@ -59,3 +59,35 @@ The evaluation supports Gemini models via the Gemini CLI. To use Gemini models:
    # Run with multiple languages
    python -m simple-evals.run_multilingual_mmlu --model gemini-2.5-flash-cli --languages mmlu_EN-US mmlu_ZH-CN mmlu_ES-LA
    ```
+
+### Running with Codex CLI Models
+
+The evaluation supports Codex CLI models. To use Codex:
+
+1. **Install the Codex CLI:**
+   ```bash
+   npm install -g @openai/codex
+   ```
+
+2. **Set up authentication:**
+   ```bash
+   export OPENAI_API_KEY="your-api-key-here"
+   ```
+
+3. **Run evaluation with Codex models:**
+   ```bash
+   # Run with default Codex CLI model
+   python -m simple-evals.run_multilingual_mmlu --model codex-cli --examples 10 --languages mmlu_EN-US
+   
+   # Run with GPT-5.1-Codex-Max
+   python -m simple-evals.run_multilingual_mmlu --model codex-gpt-5.1-codex-max --examples 10 --languages mmlu_EN-US
+   
+   # Run with GPT-5.1-Codex-Mini
+   python -m simple-evals.run_multilingual_mmlu --model codex-gpt-5.1-codex-mini --examples 10 --languages mmlu_EN-US
+   
+   # Run with GPT-5.1
+   python -m simple-evals.run_multilingual_mmlu --model codex-gpt-5.1 --examples 10 --languages mmlu_EN-US
+   
+   # Run with multiple languages
+   python -m simple-evals.run_multilingual_mmlu --model codex-gpt-5.1-codex-max --languages mmlu_EN-US mmlu_ZH-CN mmlu_ES-LA
+   ```

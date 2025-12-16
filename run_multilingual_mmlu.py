@@ -1,6 +1,6 @@
 import argparse
 import json
-from typing import Iterable
+from typing import Callable, Iterable
 
 import pandas as pd
 
@@ -11,13 +11,15 @@ from .sampler.chat_completion_sampler import (
     OPENAI_SYSTEM_MESSAGE_CHATGPT,
     ChatCompletionSampler,
 )
+from .sampler.codex_cli_sampler import CodexCLISampler
 from .sampler.gemini_cli_sampler import GeminiCLISampler
 from .sampler.o_chat_completion_sampler import OChatCompletionSampler
 
 
-def _build_samplers() -> dict[str, ChatCompletionSampler | OChatCompletionSampler | GeminiCLISampler]:
+def _build_samplers() -> dict[str, Callable[[], ChatCompletionSampler | OChatCompletionSampler | GeminiCLISampler | CodexCLISampler]]:
     """
-    Define all available samplers. Filtering happens later based on CLI args.
+    Define all available samplers as factory functions.
+    Samplers are only initialized when actually requested.
     """
     return {
         "gpt-4o_chatgpt": lambda: ChatCompletionSampler(
@@ -54,6 +56,17 @@ def _build_samplers() -> dict[str, ChatCompletionSampler | OChatCompletionSample
         ),
         "gemini-2.5-pro-cli": lambda: GeminiCLISampler(
             model="gemini-2.5-pro",
+        ),
+        # Codex CLI models
+        "codex-cli": lambda: CodexCLISampler(),
+        "codex-gpt-5.1-codex-max": lambda: CodexCLISampler(
+            model="gpt-5.1-codex-max",
+        ),
+        "codex-gpt-5.1-codex-mini": lambda: CodexCLISampler(
+            model="gpt-5.1-codex-mini",
+        ),
+        "codex-gpt-5.1": lambda: CodexCLISampler(
+            model="gpt-5.1",
         ),
     }
 
