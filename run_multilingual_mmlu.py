@@ -20,39 +20,39 @@ def _build_samplers() -> dict[str, ChatCompletionSampler | OChatCompletionSample
     Define all available samplers. Filtering happens later based on CLI args.
     """
     return {
-        "gpt-4o_chatgpt": ChatCompletionSampler(
+        "gpt-4o_chatgpt": lambda: ChatCompletionSampler(
             model="gpt-4o",
             system_message=OPENAI_SYSTEM_MESSAGE_CHATGPT,
             max_tokens=2048,
         ),
-        "gpt-4o-mini-2024-07-18": ChatCompletionSampler(
+        "gpt-4o-mini-2024-07-18": lambda: ChatCompletionSampler(
             model="gpt-4o-mini-2024-07-18",
             system_message=OPENAI_SYSTEM_MESSAGE_API,
             max_tokens=2048,
         ),
-        "o1-preview": OChatCompletionSampler(
+        "o1-preview": lambda: OChatCompletionSampler(
             model="o1-preview",
         ),
-        "o1-mini": OChatCompletionSampler(
+        "o1-mini": lambda: OChatCompletionSampler(
             model="o1-mini",
         ),
         # Default == Medium
-        "o3-mini": OChatCompletionSampler(
+        "o3-mini": lambda: OChatCompletionSampler(
             model="o3-mini",
         ),
-        "o3-mini_high": OChatCompletionSampler(
+        "o3-mini_high": lambda: OChatCompletionSampler(
             model="o3-mini",
             reasoning_effort="high",
         ),
-        "o3-mini_low": OChatCompletionSampler(
+        "o3-mini_low": lambda: OChatCompletionSampler(
             model="o3-mini",
             reasoning_effort="low",
         ),
         # Gemini CLI models
-        "gemini-2.5-flash-cli": GeminiCLISampler(
+        "gemini-2.5-flash-cli": lambda: GeminiCLISampler(
             model="gemini-2.5-flash",
         ),
-        "gemini-2.5-pro-cli": GeminiCLISampler(
+        "gemini-2.5-pro-cli": lambda: GeminiCLISampler(
             model="gemini-2.5-pro",
         ),
     }
@@ -112,11 +112,27 @@ def main(argv: Iterable[str] | None = None):
     if num_examples is None:
         num_examples = 10 if args.debug else None
 
-    samplers = _build_samplers()
-    if args.models:
-        samplers = {name: sampler for name, sampler in samplers.items() if name in args.models}
-        if not samplers:
-            raise ValueError(f"No samplers matched --model values {args.models}")
+    sampler_factories = _build_samplers()
+    
+    # Filter to requested samplers, or use all if none specified
+    requested_models = args.models if args.models else list(sampler_factories.keys())
+    
+    # Initialize only the requested samplers
+    samplers = {}
+    for name in requested_models:
+        if name not in sampler_factories:
+            raise ValueError(f"Unknown sampler: {name}. Available: {list(sampler_factories.keys())}")
+        try:
+            samplers[name] = sampler_factories[name]()
+        except Exception as e:
+            raise ValueError(
+                f"Failed to initialize sampler '{name}': {e}\n"
+                "This may be due to missing API keys or CLI tools. "
+                "Check the error message above for details."
+            ) from e
+    
+    if not samplers:
+        raise ValueError(f"No samplers could be initialized from: {requested_models}")
 
     eval_names = args.languages if args.languages else ALL_EVAL_NAMES
 
