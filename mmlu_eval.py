@@ -6,6 +6,7 @@ https://arxiv.org/abs/2009.03300
 
 import random
 import re
+from pathlib import Path
 
 import pandas
 
@@ -85,9 +86,23 @@ class MMLUEval(Eval):
     def __init__(self, num_examples: int | None = None, language: str = "EN-US"):
         if language != "EN-US":
             url = f"https://openaipublic.blob.core.windows.net/simple-evals/mmlu_{language}.csv"
+            cache_file = Path(f"~/.cache/simple-evals/mmlu_{language}.csv").expanduser()
         else:
             url = "https://openaipublic.blob.core.windows.net/simple-evals/mmlu.csv"
-        df = pandas.read_csv(url)
+            cache_file = Path("~/.cache/simple-evals/mmlu.csv").expanduser()
+
+        # Create cache directory if it doesn't exist
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Download only if not cached
+        if not cache_file.exists():
+            print(f"Downloading {language} dataset to {cache_file}...", flush=True)
+            df = pandas.read_csv(url)
+            df.to_csv(cache_file, index=False)
+        else:
+            print(f"Loading {language} dataset from cache...", flush=True)
+            df = pandas.read_csv(cache_file)
+
         examples = [row.to_dict() for _, row in df.iterrows()]
         if num_examples:
             examples = random.Random(0).sample(examples, num_examples)

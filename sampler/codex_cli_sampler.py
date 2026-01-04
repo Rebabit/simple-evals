@@ -84,22 +84,30 @@ class CodexCLISampler(SamplerBase):
         cmd: list[str] = [
             self.binary,
             "exec",
-            "--json",
+            "--dangerously-bypass-approvals-and-sandbox",
             "--skip-git-repo-check",
         ]
 
         if self.model:
             cmd.extend(["--model", self.model])
-        
-        cmd.append(prompt)
 
-        completed = subprocess.run(cmd, text=True, capture_output=True)
+        cmd.extend(["--json", "--", prompt])
+
+        completed = subprocess.run(cmd, text=True, capture_output=True, stdin=subprocess.DEVNULL)
 
         stdout = completed.stdout.strip()
         stderr = completed.stderr.strip()
 
         if completed.returncode != 0:
-            error_msg = f"Codex CLI error: {stderr}" if stderr else f"returncode {completed.returncode}"
+            error_details = []
+            error_details.append(f"Return code: {completed.returncode}")
+            error_details.append(f"Command: {' '.join(cmd)}")
+            if stderr:
+                error_details.append(f"Stderr: {stderr}")
+            if stdout:
+                error_details.append(f"Stdout: {stdout}")
+            error_msg = "\n".join(error_details)
+
             # Check for authentication errors
             stderr_lower = stderr.lower()
             if (
@@ -123,8 +131,12 @@ class CodexCLISampler(SamplerBase):
         # Parse JSONL output (newline-delimited JSON)
         response_text = None
         last_agent_message = None
-        
-        for line in stdout.split("\n"):
+        usage_info = None
+
+        lines = stdout.split("\n")
+
+        # First pass: collect agent messages
+        for line in lines:
             if not line.strip():
                 continue
             try:
@@ -142,16 +154,37 @@ class CodexCLISampler(SamplerBase):
             except json.JSONDecodeError:
                 continue
 
+        # Second pass: find usage information
+        for line in reversed(lines):
+            if not line.strip():
+                continue
+            try:
+                parsed = json.loads(line)
+                if isinstance(parsed, dict) and "usage" in parsed:
+                    usage_info = parsed["usage"]
+                    break
+            except json.JSONDecodeError:
+                continue
+
         # Use the last agent message, or fallback to raw stdout
         response_text = last_agent_message or stdout
 
+        metadata = {
+            "returncode": completed.returncode,
+            "stderr": stderr,
+            "raw_stdout": stdout,
+        }
+
+        # Add usage info if found
+        if usage_info:
+            metadata["usage"] = usage_info
+            metadata["n_input_tokens"] = usage_info.get("input_tokens")
+            metadata["n_cache_tokens"] = usage_info.get("cached_input_tokens")
+            metadata["n_output_tokens"] = usage_info.get("output_tokens")
+
         return SamplerResponse(
             response_text=response_text,
-            response_metadata={
-                "returncode": completed.returncode,
-                "stderr": stderr,
-                "raw_stdout": stdout,
-            },
+            response_metadata=metadata,
             actual_queried_message_list=message_list,
         )
 

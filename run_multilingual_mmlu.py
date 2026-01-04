@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from typing import Callable, Iterable
 
 import pandas as pd
@@ -115,6 +116,12 @@ def _parse_args(argv: Iterable[str] | None = None):
         action="store_true",
         help="Use a small default sample size (10 examples). Overridden by --examples if provided.",
     )
+    parser.add_argument(
+        "--result-dir",
+        type=str,
+        default="/tmp",
+        help="Directory to save results. Defaults to /tmp.",
+    )
     return parser.parse_args(argv)
 
 
@@ -124,6 +131,10 @@ def main(argv: Iterable[str] | None = None):
     num_examples = args.examples
     if num_examples is None:
         num_examples = 10 if args.debug else None
+
+    result_dir = args.result_dir
+    # Create result directory if it doesn't exist
+    os.makedirs(result_dir, exist_ok=True)
 
     sampler_factories = _build_samplers()
     
@@ -197,13 +208,13 @@ def main(argv: Iterable[str] | None = None):
             result = eval_obj(sampler)
             # ^^^ how to use a sampler
             file_stem = f"{eval_name}_{sampler_name}"
-            report_filename = f"/tmp/{file_stem}{debug_suffix}.html"
+            report_filename = f"{result_dir}/{file_stem}{debug_suffix}.html"
             print(f"Writing report to {report_filename}")
             with open(report_filename, "w") as fh:
                 fh.write(common.make_report(result))
             metrics = result.metrics | {"score": result.score}
             print(metrics)
-            result_filename = f"/tmp/{file_stem}{debug_suffix}.json"
+            result_filename = f"{result_dir}/{file_stem}{debug_suffix}.json"
             with open(result_filename, "w") as f:
                 f.write(json.dumps(metrics, indent=2))
             print(f"Writing results to {result_filename}")
