@@ -3,6 +3,17 @@
 **July 2025**: `simple-evals` will no longer be updated for new models or benchmark results. The repo will continue to host reference implementations for **HealthBench**, **BrowseComp**, and **SimpleQA**.
 
 ---
+# Running Harbor Parity Experiments
+
+For detailed multilingual MMLU benchmark results and instructions, see [multilingual_mmlu_benchmark_results.md](multilingual_mmlu_benchmark_results.md).
+
+**Parity command (10 examples per language, 15 languages = 150 total):**
+
+```bash
+python -m simple-evals.run_multilingual_mmlu --examples 10 --model <agent_name> --result-dir <result_dir>
+```
+
+For comparison with Harbor adapter results, see the [Harbor](https://github.com/laude-institute/harbor) repository in the `adapters/mmmlu` folder.
 
 # Overview
 This repository contains a lightweight library for evaluating language models.
